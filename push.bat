@@ -18,4 +18,3 @@ git push -u origin main
 
 echo.
 echo [Resonance] Successfully pushed updates to https://github.com/venky11-social/resonance.git!
-pause
