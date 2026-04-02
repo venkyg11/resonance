@@ -4,10 +4,10 @@ echo [Resonance] Initiating Auto-Push to GitHub...
 :: Initialize git if it has not been done
 if not exist ".git" (
     git init
-    git remote add origin https://github.com/venky11-social/resonance.git
+    git remote add origin https://github.com/venkyg11/resonance.git
 ) else (
     :: Ensure the remote is correct
-    git remote set-url origin https://github.com/venky11-social/resonance.git
+    git remote set-url origin https://github.com/venkyg11/resonance.git
 )
 
 :: Add all files, commit, and push
@@ -17,4 +17,4 @@ git branch -M main
 git push -u origin main
 
 echo.
-echo [Resonance] Successfully pushed updates to https://github.com/venky11-social/resonance.git!
+echo [Resonance] Successfully pushed updates to https://github.com/venkyg11/resonance.git!
