@@ -13,6 +13,7 @@ if not exist ".git" (
 :: Add all files, commit, and push
 git add .
 git commit -m "Auto-Commit: resonance player UI and performance updates"
+git branch -M main
 git push -u origin main
 
 echo.
