@@ -19,7 +19,7 @@ export default defineConfig(({ mode }) => ({
     mode === "development" && componentTagger(),
     VitePWA({
       registerType: "autoUpdate",
-      includeAssets: ["favicon.ico", "logo.png"],
+      includeAssets: ["logo.png"],
       manifest: {
         name: "Resonance Music Player",
         short_name: "Resonance",
@@ -37,6 +37,12 @@ export default defineConfig(({ mode }) => ({
             src: "/logo.png",
             sizes: "512x512",
             type: "image/png"
+          },
+          {
+            src: "/logo.png",
+            sizes: "512x512",
+            type: "image/png",
+            purpose: "any maskable"
           }
         ]
       }
