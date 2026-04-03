@@ -1,7 +1,9 @@
 import { useMusicPlayer } from '@/contexts/MusicPlayerContext';
+import { useVideoPlayer } from '@/contexts/VideoPlayerContext';
 import {
   Play, Pause, SkipBack, SkipForward, Shuffle,
   Repeat, Repeat1, Volume2, VolumeX, Volume1,
+  Music, Video, Tv, Zap
 } from 'lucide-react';
 
 function formatTime(sec: number) {
@@ -11,95 +13,144 @@ function formatTime(sec: number) {
   return `${m}:${s.toString().padStart(2, '0')}`;
 }
 
-const ControlBar = () => {
+interface ControlBarProps {
+  activeMode?: 'music' | 'video';
+}
+
+const ControlBar = ({ activeMode = 'music' }: ControlBarProps) => {
+  const musicPlayer = useMusicPlayer();
+  const videoPlayer = useVideoPlayer();
+
+  // Pick state based on mode
   const {
     isPlaying, togglePlay, next, previous, currentTime, duration, seekTo,
     volume, setVolume, isMuted, toggleMute, shuffle, toggleShuffle,
-    repeat, cycleRepeat, tracks,
-  } = useMusicPlayer();
+    repeat, cycleRepeat, tracks, currentTrackIndex
+  } = activeMode === 'music' ? musicPlayer : {
+    isPlaying: videoPlayer.isPlaying,
+    togglePlay: videoPlayer.togglePlay,
+    next: videoPlayer.next,
+    previous: videoPlayer.previous,
+    currentTime: videoPlayer.currentTime,
+    duration: videoPlayer.duration,
+    seekTo: videoPlayer.seekTo,
+    volume: videoPlayer.volume,
+    setVolume: videoPlayer.setVolume,
+    isMuted: videoPlayer.isMuted,
+    toggleMute: videoPlayer.toggleMute,
+    shuffle: false,
+    toggleShuffle: () => {},
+    repeat: videoPlayer.isLooping ? 'one' : 'off',
+    cycleRepeat: videoPlayer.toggleLoop,
+    tracks: videoPlayer.videos as any, // Cast for compatibility
+    currentTrackIndex: videoPlayer.currentVideoIndex
+  };
 
+  const videoSpeed = videoPlayer.playbackSpeed;
+  const togglePiP = videoPlayer.togglePiP;
+  const track = currentTrackIndex >= 0 ? tracks[currentTrackIndex] : null;
   const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
 
+  const resetVolBoost = () => setVolume(1);
+
   return (
-    <div className="glass-3d rounded-2xl relative px-6 py-3 z-10">
-      {/* Seek bar */}
-      <div className="flex items-center gap-3 mb-2">
-        <span className="text-xs font-mono text-muted-foreground w-10 text-right">{formatTime(currentTime)}</span>
-        <div
-          className="flex-1 h-1.5 bg-muted rounded-full cursor-pointer group hover:h-2.5 transition-all relative"
-          onClick={(e) => {
-            const rect = e.currentTarget.getBoundingClientRect();
-            const pct = (e.clientX - rect.left) / rect.width;
-            seekTo(pct * duration);
-          }}
-        >
-          <div
-            className="h-full rounded-full gradient-primary transition-all"
-            style={{ width: `${progress}%` }}
-          />
-          <div
-            className="absolute top-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-foreground shadow-lg opacity-0 group-hover:opacity-100 transition-opacity"
-            style={{ left: `${progress}%`, transform: `translateX(-50%) translateY(-50%)` }}
-          />
+    <div className="glass-3d rounded-2xl relative px-4 py-2 z-10 flex items-center justify-between gap-4 h-16">
+      {/* Left: Mini thumbnail + info */}
+      <div className="flex items-center gap-3 w-1/4 min-w-0">
+        <div className="w-10 h-10 rounded-lg bg-muted overflow-hidden flex-shrink-0 shadow-md">
+          {activeMode === 'video' && track?.thumbnail ? (
+            <img src={track.thumbnail} alt="" className="w-full h-full object-cover" />
+          ) : track?.artwork ? (
+            <img src={track.artwork} alt="" className="w-full h-full object-cover" />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center bg-secondary">
+              {activeMode === 'music' ? <Music className="w-5 h-5 text-muted-foreground" /> : <Video className="w-5 h-5 text-muted-foreground" />}
+            </div>
+          )}
         </div>
-        <span className="text-xs font-mono text-muted-foreground w-10">{formatTime(duration)}</span>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-medium text-foreground truncate leading-tight">
+            {track?.title || (activeMode === 'video' ? 'No video selected' : 'No track selected')}
+          </p>
+          <p className="text-[11px] text-muted-foreground truncate leading-tight mt-0.5 opacity-80">
+            {track?.artist || (activeMode === 'video' ? (track?.resolution || 'Video Player') : 'Music Player')}
+          </p>
+        </div>
       </div>
 
-      {/* Controls */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <button onClick={toggleShuffle} className={`p-2 rounded-lg transition-all ${shuffle ? 'text-primary' : 'text-muted-foreground hover:text-foreground'}`}>
-            <Shuffle className="w-4 h-4" />
-          </button>
-          <button onClick={cycleRepeat} className={`p-2 rounded-lg transition-all ${repeat !== 'off' ? 'text-primary' : 'text-muted-foreground hover:text-foreground'}`}>
-            {repeat === 'one' ? <Repeat1 className="w-4 h-4" /> : <Repeat className="w-4 h-4" />}
-          </button>
-        </div>
-
-        <div className="flex items-center gap-3">
-          <button onClick={previous} className="p-2 text-foreground hover:text-primary transition-colors" disabled={tracks.length === 0}>
-            <SkipBack className="w-5 h-5" />
+      {/* Center: Slim progress bar + Playback controls */}
+      <div className="flex-1 flex flex-col items-center max-w-xl">
+        <div className="flex items-center gap-4 mb-1">
+          <button onClick={previous} className="p-1.5 text-foreground hover:text-primary transition-colors">
+            <SkipBack className="w-4 h-4" />
           </button>
           <button
             onClick={togglePlay}
-            className="gradient-primary w-12 h-12 rounded-full flex items-center justify-center text-primary-foreground hover:scale-110 transition-transform shadow-lg"
-            disabled={tracks.length === 0}
+            className="gradient-primary w-10 h-10 rounded-full flex items-center justify-center text-primary-foreground hover:scale-105 transition-transform shadow-md"
           >
             {isPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5 ml-0.5" />}
           </button>
-          <button onClick={next} className="p-2 text-foreground hover:text-primary transition-colors" disabled={tracks.length === 0}>
-            <SkipForward className="w-5 h-5" />
+          <button onClick={next} className="p-1.5 text-foreground hover:text-primary transition-colors">
+            <SkipForward className="w-4 h-4" />
           </button>
         </div>
-
-        <div className="flex items-center gap-2">
-          <button onClick={toggleMute} className="p-2 text-muted-foreground hover:text-foreground transition-colors">
-            {isMuted || volume === 0 ? <VolumeX className="w-4 h-4" /> :
-             volume < 0.5 ? <Volume1 className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
-          </button>
-          <div className="relative w-24">
-            <input
-              type="range"
-              min="0"
-              max="2"
-              step="0.01"
-              value={isMuted ? 0 : volume}
-              onChange={e => setVolume(parseFloat(e.target.value))}
-              className="w-full h-1 cursor-pointer appearance-none rounded-full"
-              style={{
-                background: `linear-gradient(to right, 
-                  hsl(var(--primary)) 0%, 
-                  hsl(var(--primary)) ${Math.min(volume, 1) * 50}%, 
-                  ${volume > 1 ? `hsl(30 90% 50%) ${50}%, hsl(0 80% 50%) ${Math.min(volume / 2, 1) * 100}%` : `hsl(var(--muted)) ${Math.min(volume, 1) * 50}%`}, 
-                  hsl(var(--muted)) 100%)`,
-              }}
-            />
+        <div className="w-full flex items-center gap-2">
+          <span className="text-[10px] font-mono text-muted-foreground w-8 text-right">{formatTime(currentTime)}</span>
+          <div
+            className="flex-1 h-1 bg-muted rounded-full cursor-pointer group hover:h-1.5 transition-all relative"
+            onClick={(e) => {
+              const rect = e.currentTarget.getBoundingClientRect();
+              const pct = (e.clientX - rect.left) / rect.width;
+              seekTo(pct * duration);
+            }}
+          >
+            <div className="h-full rounded-full gradient-primary transition-all" style={{ width: `${progress}%` }} />
           </div>
-          <span className={`text-[10px] font-mono w-8 text-right ${
-            volume > 1.5 ? 'text-red-400' : volume > 1 ? 'text-orange-400' : 'text-muted-foreground'
-          }`}>
-            {Math.round(volume * 100)}%
-          </span>
+          <span className="text-[10px] font-mono text-muted-foreground w-8">{formatTime(duration)}</span>
+        </div>
+      </div>
+
+      {/* Right: Mode-specific controls */}
+      <div className="w-1/4 flex items-center justify-end gap-1 sm:gap-2">
+        {activeMode === 'music' ? (
+          <>
+            <button onClick={toggleShuffle} className={`p-2 rounded-lg transition-all ${shuffle ? 'text-primary' : 'text-muted-foreground hover:text-foreground'}`}>
+              <Shuffle className="w-4 h-4" />
+            </button>
+            <button onClick={cycleRepeat} className={`p-2 rounded-lg transition-all ${repeat !== 'off' ? 'text-primary' : 'text-muted-foreground hover:text-foreground'}`}>
+              {repeat === 'one' ? <Repeat1 className="w-4 h-4" /> : <Repeat className="w-4 h-4" />}
+            </button>
+          </>
+        ) : (
+          <>
+            <button 
+              onClick={resetVolBoost}
+              className={`px-2 py-1 rounded-md text-[10px] font-bold transition-all flex items-center gap-1 ${
+                volume > 1 ? 'bg-orange-500/20 text-orange-400 border border-orange-500/30' : 'bg-muted text-muted-foreground'
+              }`}
+            >
+              <Volume2 className="w-3 h-3" />
+              {Math.round(volume * 100)}%
+            </button>
+            <button onClick={togglePiP} className="p-2 text-muted-foreground hover:text-foreground transition-colors" title="Picture in Picture">
+              <Tv className="w-4 h-4" />
+            </button>
+            <button 
+              className="px-2 py-1 rounded-md bg-muted text-muted-foreground text-[10px] font-bold hover:text-foreground transition-all flex items-center gap-1"
+              title="Playback Speed"
+            >
+              <Zap className="w-3 h-3" />
+              {videoSpeed.toFixed(1)}x
+            </button>
+          </>
+        )}
+        
+        <div className="h-4 w-[1px] bg-border mx-1" />
+        
+        <div className="flex items-center gap-2">
+          <button onClick={toggleMute} className="p-1.5 text-muted-foreground hover:text-foreground transition-colors">
+            {isMuted || volume === 0 ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+          </button>
         </div>
       </div>
     </div>

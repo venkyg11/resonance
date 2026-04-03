@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useRef, useCallback, useEffect } from 'react';
+import { get, set } from '../utils/db';
 
 export interface Track {
   id: string;
@@ -114,6 +115,7 @@ export const MusicPlayerProvider: React.FC<{ children: React.ReactNode }> = ({ c
   const [analyserNode, setAnalyserNode] = useState<AnalyserNode | null>(null);
   const [showEqualizer, setShowEqualizer] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [isDbLoaded, setIsDbLoaded] = useState(false);
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const audioCtxRef = useRef<AudioContext | null>(null);
@@ -133,6 +135,27 @@ export const MusicPlayerProvider: React.FC<{ children: React.ReactNode }> = ({ c
   useEffect(() => {
     localStorage.setItem('music-playlists', JSON.stringify(playlists));
   }, [playlists]);
+
+  // DB Load on mount
+  useEffect(() => {
+    get('saved-tracks').then((saved: Track[]) => {
+      if (saved && Array.isArray(saved)) {
+        const restored = saved.map(t => ({
+          ...t,
+          objectUrl: t.file ? URL.createObjectURL(t.file) : t.objectUrl
+        }));
+        setTracks(restored);
+      }
+    }).catch(console.error)
+      .finally(() => setIsDbLoaded(true));
+  }, []);
+
+  // DB Save on change
+  useEffect(() => {
+    if (isDbLoaded) {
+      set('saved-tracks', tracks).catch(console.error);
+    }
+  }, [tracks, isDbLoaded]);
 
   // Init audio element
   useEffect(() => {
@@ -450,6 +473,36 @@ export const MusicPlayerProvider: React.FC<{ children: React.ReactNode }> = ({ c
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
   }, [togglePlay, seekTo, currentTime, duration, volume, setVolume, nextTrack, previous]);
+
+  // Media session action handlers
+  useEffect(() => {
+    if ('mediaSession' in navigator) {
+      navigator.mediaSession.setActionHandler('play', play);
+      navigator.mediaSession.setActionHandler('pause', pause);
+      navigator.mediaSession.setActionHandler('previoustrack', previous);
+      navigator.mediaSession.setActionHandler('nexttrack', nextTrack);
+    }
+  }, [play, pause, previous, nextTrack]);
+
+  // Media session playback state
+  useEffect(() => {
+    if ('mediaSession' in navigator) {
+      navigator.mediaSession.playbackState = isPlaying ? 'playing' : 'paused';
+    }
+  }, [isPlaying]);
+
+  // Media session metadata
+  useEffect(() => {
+    if ('mediaSession' in navigator && currentTrackIndex >= 0 && tracks[currentTrackIndex]) {
+      const track = tracks[currentTrackIndex];
+      navigator.mediaSession.metadata = new MediaMetadata({
+        title: track.title || 'Unknown Title',
+        artist: track.artist || 'Unknown Artist',
+        album: track.album || 'Unknown Album',
+        artwork: track.artwork ? [{ src: track.artwork, sizes: '512x512', type: 'image/jpeg' }] : []
+      });
+    }
+  }, [currentTrackIndex, tracks]);
 
   const value: ContextType = {
     tracks, currentTrackIndex, isPlaying, currentTime, duration, volume, isMuted,

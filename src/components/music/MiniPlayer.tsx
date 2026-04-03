@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useMusicPlayer } from '@/contexts/MusicPlayerContext';
+import { useVideoPlayer } from '@/contexts/VideoPlayerContext';
 import { Play, Pause, SkipBack, SkipForward, Music, Heart, ChevronDown, Shuffle, Repeat, Repeat1, Volume2, VolumeX, Volume1, Sliders } from 'lucide-react';
 import Visualizer from './Visualizer';
 
@@ -10,12 +11,39 @@ function formatTime(sec: number) {
   return `${m}:${s.toString().padStart(2, '0')}`;
 }
 
-const MiniPlayer = () => {
+interface MiniPlayerProps {
+  activeMode?: 'music' | 'video';
+}
+
+const MiniPlayer = ({ activeMode = 'music' }: MiniPlayerProps) => {
+  const musicPlayer = useMusicPlayer();
+  const videoPlayer = useVideoPlayer();
+
   const {
     tracks, currentTrackIndex, isPlaying, togglePlay, next, previous,
     currentTime, duration, seekTo, volume, setVolume, isMuted, toggleMute,
     shuffle, toggleShuffle, repeat, cycleRepeat, toggleLike, toggleEqualizer,
-  } = useMusicPlayer();
+  } = activeMode === 'music' ? musicPlayer : {
+    tracks: videoPlayer.videos as any,
+    currentTrackIndex: videoPlayer.currentVideoIndex,
+    isPlaying: videoPlayer.isPlaying,
+    togglePlay: videoPlayer.togglePlay,
+    next: videoPlayer.next,
+    previous: videoPlayer.previous,
+    currentTime: videoPlayer.currentTime,
+    duration: videoPlayer.duration,
+    seekTo: videoPlayer.seekTo,
+    volume: videoPlayer.volume,
+    setVolume: videoPlayer.setVolume,
+    isMuted: videoPlayer.isMuted,
+    toggleMute: videoPlayer.toggleMute,
+    shuffle: false,
+    toggleShuffle: () => {},
+    repeat: videoPlayer.isLooping ? 'one' : 'off',
+    cycleRepeat: videoPlayer.toggleLoop,
+    toggleLike: (id: string) => videoPlayer.removeVideo(videoPlayer.videos.findIndex(v => v.id === id)), // Temporary mapping or placeholder
+    toggleEqualizer: () => {}
+  };
   const [expanded, setExpanded] = useState(false);
   const track = currentTrackIndex >= 0 ? tracks[currentTrackIndex] : null;
   const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
@@ -42,14 +70,16 @@ const MiniPlayer = () => {
           <div className="relative w-64 h-64 mb-8">
             <div className={`absolute inset-0 rounded-2xl ${isPlaying ? 'glow-accent' : ''} transition-shadow duration-700`} />
             <div className="w-full h-full rounded-2xl bg-muted overflow-hidden relative">
-              {track.artwork ? (
+              {activeMode === 'video' && track.thumbnail ? (
+                <img src={track.thumbnail} alt={track.title} className="w-full h-full object-cover" />
+              ) : track.artwork ? (
                 <img src={track.artwork} alt={track.title} className="w-full h-full object-cover" />
               ) : (
                 <div className="w-full h-full flex items-center justify-center bg-secondary">
                   <Music className="w-20 h-20 text-muted-foreground" />
                 </div>
               )}
-              <Visualizer />
+              {activeMode === 'music' && <Visualizer />}
             </div>
           </div>
 
@@ -58,7 +88,9 @@ const MiniPlayer = () => {
             <div className="flex items-center justify-between">
               <div className="flex-1 min-w-0 text-left">
                 <h2 className="text-lg font-semibold text-foreground truncate">{track.title}</h2>
-                <p className="text-sm text-muted-foreground truncate">{track.artist}</p>
+                <p className="text-sm text-muted-foreground truncate">
+                  {track.artist || (activeMode === 'video' ? track.resolution : '')}
+                </p>
               </div>
               <button onClick={() => toggleLike(track.id)} className="ml-3 transition-all hover:scale-110">
                 <Heart className={`w-5 h-5 ${track.liked ? 'fill-primary text-primary' : 'text-muted-foreground'}`} />
@@ -153,7 +185,9 @@ const MiniPlayer = () => {
         <div className="flex items-center gap-3 min-w-0 w-[50%] sm:w-1/3 pr-2">
           {/* Thumbnail */}
           <div className="w-10 h-10 rounded-lg bg-muted overflow-hidden flex-shrink-0 shadow-md">
-            {track.artwork ? (
+            {activeMode === 'video' && track.thumbnail ? (
+              <img src={track.thumbnail} alt={track.title} className="w-full h-full object-cover" />
+            ) : track.artwork ? (
               <img src={track.artwork} alt={track.title} className="w-full h-full object-cover" />
             ) : (
               <div className="w-full h-full flex items-center justify-center bg-secondary">
@@ -164,7 +198,9 @@ const MiniPlayer = () => {
           {/* Info */}
           <div className="flex-1 min-w-0 flex flex-col justify-center -mt-1 sm:mt-0">
             <p className="text-sm font-medium text-foreground truncate leading-tight">{track.title}</p>
-            <p className="text-[11px] text-muted-foreground truncate leading-tight mt-0.5 opacity-80">{track.artist}</p>
+            <p className="text-[11px] text-muted-foreground truncate leading-tight mt-0.5 opacity-80">
+              {track.artist || (activeMode === 'video' ? track.resolution : '')}
+            </p>
           </div>
         </div>
         {/* Center/Right: Controls */}

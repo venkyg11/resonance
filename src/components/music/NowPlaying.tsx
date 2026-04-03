@@ -35,18 +35,25 @@ const NowPlaying = () => {
         {track && <p className="text-xs text-muted-foreground mt-0.5">{track.album}</p>}
       </div>
 
-      {/* EQ bars animation */}
+      {/* Micro-EQ Micro-Animation */}
       {track && (
-        <div className="flex items-end gap-1 h-6 mt-4">
-          {[...Array(5)].map((_, i) => (
-            <div key={i} className={`eq-bar ${!isPlaying ? 'paused' : ''}`} />
+        <div className="flex items-end justify-center gap-0.5 h-4 mt-8 mb-4">
+          {[...Array(6)].map((_, i) => (
+            <div 
+              key={i} 
+              className={`eq-bar ${!isPlaying ? 'paused' : ''}`}
+              style={{ 
+                animationDelay: `${i * 0.15}s`,
+                opacity: 0.8 - (i * 0.05)
+              }} 
+            />
           ))}
         </div>
       )}
 
       {/* Actions */}
       {track && (
-        <div className="flex items-center gap-4 mt-4">
+        <div className="flex items-center gap-4 mt-6">
           <button onClick={() => toggleLike(track.id)} className="transition-all hover:scale-110">
             <Heart className={`w-5 h-5 ${track.liked ? 'fill-primary text-primary' : 'text-muted-foreground'}`} />
           </button>
