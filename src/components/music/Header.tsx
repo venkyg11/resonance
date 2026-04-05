@@ -26,7 +26,10 @@ const Header = ({ activeMode, onModeChange }: HeaderProps) => {
           <div className="w-9 h-9 rounded-lg flex items-center justify-center overflow-hidden">
             <img src="/logo.png" alt="Resonance" className="w-full h-full object-cover" />
           </div>
-          <h1 className="text-lg font-semibold text-foreground hidden sm:block">Resonance</h1>
+          <div className="flex flex-col">
+            <h1 className="text-lg font-bold text-foreground hidden sm:block leading-none">Resonance</h1>
+            <p className="text-[10px] text-muted-foreground hidden sm:block mt-0.5 font-medium opacity-70">Built by Venky❤️</p>
+          </div>
         </div>
 
         {/* Tab Switcher */}
