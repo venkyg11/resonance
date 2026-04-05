@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ThemeProvider } from '@/contexts/ThemeContext';
 import { SettingsProvider } from '@/contexts/SettingsContext';
 import { MusicPlayerProvider } from '@/contexts/MusicPlayerContext';
@@ -20,8 +20,21 @@ import SettingsPage from '@/components/music/SettingsPage';
 import VideoView from '@/components/video/VideoView';
 
 const Index = () => {
-  const [activeTab, setActiveTab] = useState<TabId>('home');
-  const [activeMode, setActiveMode] = useState<'music' | 'video'>('music');
+  const [activeTab, setActiveTab] = useState<TabId>(() => {
+    return (localStorage.getItem('aura-active-tab') as TabId) || 'home';
+  });
+  const [activeMode, setActiveMode] = useState<'music' | 'video'>(() => {
+    return (localStorage.getItem('aura-active-mode') as 'music' | 'video') || 'music';
+  });
+
+  // Persist state changes
+  useEffect(() => {
+    localStorage.setItem('aura-active-tab', activeTab);
+  }, [activeTab]);
+
+  useEffect(() => {
+    localStorage.setItem('aura-active-mode', activeMode);
+  }, [activeMode]);
 
   return (
     <ThemeProvider>

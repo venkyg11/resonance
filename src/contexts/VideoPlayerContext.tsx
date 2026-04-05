@@ -63,11 +63,20 @@ export const useVideoPlayer = () => {
 
 export const VideoPlayerProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [videos, setVideos] = useState<VideoTrack[]>([]);
-  const [currentVideoIndex, setCurrentVideoIndex] = useState(-1);
+  const [currentVideoIndex, setCurrentVideoIndex] = useState(() => {
+    const saved = localStorage.getItem('aura-video-index');
+    return saved ? parseInt(saved, 10) : -1;
+  });
   const [isPlaying, setIsPlaying] = useState(false);
-  const [currentTime, setCurrentTime] = useState(0);
+  const [currentTime, setCurrentTime] = useState(() => {
+    const saved = localStorage.getItem('aura-video-time');
+    return saved ? parseFloat(saved) : 0;
+  });
   const [duration, setDuration] = useState(0);
-  const [volume, setVolumeState] = useState(1);
+  const [volume, setVolumeState] = useState(() => {
+    const saved = localStorage.getItem('aura-video-volume');
+    return saved ? parseFloat(saved) : 1;
+  });
   const [isMuted, setIsMuted] = useState(false);
   const [playbackSpeed, setPlaybackSpeed] = useState(1);
   const [brightness, setBrightness] = useState(100);
@@ -102,6 +111,17 @@ export const VideoPlayerProvider: React.FC<{ children: React.ReactNode }> = ({ c
           objectUrl: v.file ? URL.createObjectURL(v.file) : v.objectUrl
         }));
         setVideos(restored);
+        
+        // Restore last state
+        const sIdx = localStorage.getItem('aura-video-index');
+        const sTime = localStorage.getItem('aura-video-time');
+        if (sIdx !== null) {
+          const idx = parseInt(sIdx, 10);
+          if (idx >= 0 && idx < restored.length) {
+            setCurrentVideoIndex(idx);
+            if (sTime) setCurrentTime(parseFloat(sTime));
+          }
+        }
       }
     }).catch(console.error).finally(() => setIsDbLoaded(true));
   }, []);
@@ -111,6 +131,23 @@ export const VideoPlayerProvider: React.FC<{ children: React.ReactNode }> = ({ c
       set('saved-videos', videos).catch(console.error);
     }
   }, [videos, isDbLoaded]);
+
+  // Persist index, time, volume
+  useEffect(() => {
+    if (isDbLoaded) {
+      localStorage.setItem('aura-video-index', currentVideoIndex.toString());
+    }
+  }, [currentVideoIndex, isDbLoaded]);
+
+  useEffect(() => {
+    if (isDbLoaded && currentVideoIndex !== -1) {
+      localStorage.setItem('aura-video-time', currentTime.toString());
+    }
+  }, [currentTime, currentVideoIndex, isDbLoaded]);
+
+  useEffect(() => {
+    localStorage.setItem('aura-video-volume', volume.toString());
+  }, [volume]);
 
   const initAudio = useCallback(() => {
     if (!videoRef.current || audioCtxRef.current) return;
@@ -182,7 +219,7 @@ export const VideoPlayerProvider: React.FC<{ children: React.ReactNode }> = ({ c
   }, [isMuted, volume]);
 
   const setVolume = useCallback((vol: number) => {
-    const clamped = Math.min(2, Math.max(0, vol));
+    const clamped = Math.min(1.5, Math.max(0, vol));
     setVolumeState(clamped);
     if (videoRef.current) videoRef.current.volume = Math.min(1, clamped);
     if (gainRef.current) gainRef.current.gain.value = clamped > 1 ? clamped : 1;

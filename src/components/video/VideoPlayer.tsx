@@ -4,7 +4,7 @@ import {
   Play, Pause, SkipBack, SkipForward, FastForward, Rewind, 
   Volume2, VolumeX, Maximize, Minimize, Tv, Repeat, 
   Settings, Camera, Scissors, Type, Layout, Sun, Contrast as ContrastIcon,
-  AlertTriangle, Gauge, Zap
+  AlertTriangle, Gauge, Zap, Plus, X, List, MoreHorizontal
 } from 'lucide-react';
 
 function formatTime(sec: number) {
@@ -29,6 +29,7 @@ const VideoPlayer = () => {
   const containerRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const [showControls, setShowControls] = useState(true);
+  const [showMore, setShowMore] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const controlsTimeoutRef = useRef<NodeJS.Timeout>();
 
@@ -145,112 +146,142 @@ const VideoPlayer = () => {
       </div>
 
       {/* Persistent Controls Overlay (bottom) */}
-      <div className={`absolute bottom-0 left-0 right-0 p-4 md:p-6 bg-gradient-to-t from-black/90 via-black/40 to-transparent transition-opacity duration-500 z-20 ${showControls ? 'opacity-100' : 'opacity-0'}`}>
+      <div className={`absolute bottom-0 left-0 right-0 p-4 md:p-6 bg-gradient-to-t from-black/95 via-black/60 to-transparent transition-all duration-500 z-20 ${showControls ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'}`}>
         
-        <div className="flex flex-col gap-3 md:gap-4">
+        <div className="flex flex-col gap-3 md:gap-4 max-w-5xl mx-auto">
           
           {/* Custom Seek Bar */}
           <div className="flex items-center gap-3 md:gap-4 group/seek">
-            <span className="text-[10px] md:text-[11px] font-mono text-white/50 w-8 md:w-12 text-right">{formatTime(currentTime)}</span>
+            <span className="text-[10px] md:text-[11px] font-mono text-white/70 w-8 md:w-12 text-right tabular-nums">{formatTime(currentTime)}</span>
             <div 
-              className="flex-1 h-1 md:h-1.5 bg-white/10 rounded-full cursor-pointer relative group-hover/seek:h-2 transition-all"
+              className="flex-1 h-1.5 bg-white/10 rounded-full cursor-pointer relative group-hover/seek:h-2.5 transition-all"
               onClick={(e) => {
                 const rect = e.currentTarget.getBoundingClientRect();
                 const pct = (e.clientX - rect.left) / rect.width;
                 seekTo(pct * duration);
               }}
             >
-              <div className="absolute inset-0 h-full bg-white/20 transition-all" style={{ width: '0%' }} />
-              <div className="absolute inset-0 h-full gradient-primary transition-all duration-100" style={{ width: `${(currentTime / (duration || 1)) * 100}%` }} />
+              <div className="absolute inset-0 h-full bg-white/20 rounded-full transition-all" style={{ width: '0%' }} />
+              <div className="absolute inset-0 h-full gradient-primary rounded-full transition-all duration-100 shadow-[0_0_10px_rgba(var(--primary-rgb),0.5)]" style={{ width: `${(currentTime / (duration || 1)) * 100}%` }} />
+              {/* Handle */}
+              <div 
+                className="absolute top-1/2 -translate-y-1/2 w-3 h-3 bg-white rounded-full shadow-lg scale-0 group-hover/seek:scale-100 transition-transform"
+                style={{ left: `${(currentTime / (duration || 1)) * 100}%` }}
+              />
             </div>
-            <span className="text-[10px] md:text-[11px] font-mono text-white/50 w-8 md:w-12">{formatTime(duration)}</span>
+            <span className="text-[10px] md:text-[11px] font-mono text-white/70 w-8 md:w-12 tabular-nums">{formatTime(duration)}</span>
           </div>
 
-          {/* Status Row */}
-          <div className="flex items-center justify-between mb-1">
-            <div className="flex flex-col">
-              <h3 className="text-white font-bold text-sm md:text-base truncate max-w-[200px] md:max-w-md">{track.title}</h3>
+          {/* Status and Primary Controls Row */}
+          <div className="flex items-center justify-between gap-4">
+            {/* Title - Visible on Desktop, hidden on Mobile if clean view active */}
+            <div className="hidden md:flex flex-col min-w-0">
+              <h3 className="text-white font-bold text-base truncate max-w-md">{track.title}</h3>
               <div className="flex items-center gap-2">
-                <span className="px-1.5 py-0.5 rounded bg-primary/20 text-primary text-[9px] font-bold uppercase tracking-wider block w-fit">
+                <span className="px-1.5 py-0.5 rounded bg-primary/20 text-primary text-[9px] font-bold uppercase tracking-wider">
                   {track.resolution || 'Auto'}
                 </span>
                 <span className="text-[10px] text-white/40 font-medium">1080p Stream Optimized</span>
               </div>
             </div>
-          </div>
 
-          {/* Controls Row */}
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-1 md:gap-2">
-              <button onClick={previous} className="p-1.5 text-white/70 hover:text-white transition-colors">
-                <SkipBack className="w-4 h-4 md:w-5 md:h-5" />
-              </button>
-              <button onClick={() => seekTo(currentTime - 10)} className="p-1.5 text-white/70 hover:text-white transition-colors">
-                <Rewind className="w-4 h-4 md:w-5 md:h-5" />
+            {/* Main Playback Controls - Always Visible */}
+            <div className="flex-1 md:flex-none flex items-center justify-center md:justify-start gap-3 md:gap-6">
+              <button onClick={previous} className="p-2 text-white/60 hover:text-white transition-all hover:scale-110 active:scale-95">
+                <SkipBack className="w-5 h-5 md:w-6 md:h-6" />
               </button>
               
               <button 
                 onClick={togglePlay}
-                className="w-10 h-10 md:w-12 md:h-12 rounded-full gradient-primary flex items-center justify-center text-white hover:scale-110 transition-transform shadow-lg"
+                className="w-12 h-12 md:w-14 md:h-14 rounded-full gradient-primary flex items-center justify-center text-white hover:scale-110 active:scale-90 transition-all shadow-[0_0_20px_rgba(var(--primary-rgb),0.4)]"
               >
-                {isPlaying ? <Pause className="w-5 h-5 md:w-6 md:h-6" /> : <Play className="w-5 h-5 md:w-6 md:h-6 ml-0.5" />}
+                {isPlaying ? <Pause className="w-6 h-6 md:w-7 md:h-7" /> : <Play className="w-6 h-6 md:w-7 md:h-7 ml-1" />}
               </button>
 
-              <button onClick={() => seekTo(currentTime + 10)} className="p-1.5 text-white/70 hover:text-white transition-colors">
-                <FastForward className="w-4 h-4 md:w-5 md:h-5" />
-              </button>
-              <button onClick={next} className="p-1.5 text-white/70 hover:text-white transition-colors">
-                <SkipForward className="w-4 h-4 md:w-5 md:h-5" />
+              <button onClick={next} className="p-2 text-white/60 hover:text-white transition-all hover:scale-110 active:scale-95">
+                <SkipForward className="w-5 h-5 md:w-6 md:h-6" />
               </button>
             </div>
 
-            {/* Volume Boost for Mobile: Show as icon/badge, toggle slider on tap if space limited */}
-            <div className="hidden sm:flex flex-col items-center gap-1">
-              <div className="flex items-center gap-2">
-                <div className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${volume > 1.7 ? 'bg-orange-500/20 text-orange-400' : 'bg-white/10 text-white/60'}`}>
-                  {Math.round(volume * 100)}%
-                </div>
-              </div>
-              <input 
-                type="range" min="0" max="2" step="0.01" 
-                value={volume}
-                onChange={(e) => setVolume(parseFloat(e.target.value))}
-                className="aura-vol-slider w-24 md:w-32 lg:w-40"
-              />
-            </div>
-
+            {/* Right side utility icons */}
             <div className="flex items-center gap-1 md:gap-3">
-              <button onClick={toggleMute} className="p-1.5 md:p-2 text-white/70 hover:text-white transition-colors">
-                {isMuted || volume === 0 ? <VolumeX className="w-4 h-4 md:w-5 md:h-5" /> : <Volume2 className="w-4 h-4 md:w-5 md:h-5" />}
+              <button 
+                onClick={toggleMute} 
+                className="p-2 text-white/60 hover:text-white transition-colors"
+                title="Mute/Unmute"
+              >
+                {isMuted || volume === 0 ? <VolumeX className="w-5 h-5 md:w-6 md:h-6" /> : <Volume2 className="w-5 h-5 md:w-6 md:h-6" />}
               </button>
-              <button onClick={toggleFullscreen} className="p-1.5 md:p-2 text-white/70 hover:text-white transition-colors">
-                {isFullscreen ? <Minimize className="w-4 h-4 md:w-5 md:h-5" /> : <Maximize className="w-4 h-4 md:w-5 md:h-5" />}
+
+              {/* Mobile Plus Button - Only on Mobile */}
+              <button 
+                onClick={() => setShowMore(!showMore)}
+                className={`md:hidden p-2.5 rounded-full transition-all ${showMore ? 'bg-primary text-white rotate-45' : 'bg-white/10 text-white'}`}
+              >
+                <Plus className="w-5 h-5" />
+              </button>
+
+              <button 
+                onClick={toggleFullscreen} 
+                className="p-2 text-white/60 hover:text-white transition-colors"
+                title="Fullscreen"
+              >
+                {isFullscreen ? <Minimize className="w-5 h-5 md:w-6 md:h-6" /> : <Maximize className="w-5 h-5 md:w-6 md:h-6" />}
               </button>
             </div>
           </div>
 
-          {/* Desktop-only options or hidden on small mobile */}
-          <div className="hidden md:flex items-center justify-between gap-4 pt-2 border-t border-white/10 mt-1">
-            <div className="flex items-center gap-4">
-              <OptionItem icon={<Tv className="w-4 h-4" />} label="PiP" active={showPiP} onClick={togglePiP} />
-              <OptionItem icon={<Repeat className="w-4 h-4" />} label="Loop" active={isLooping} onClick={toggleLoop} />
-              <OptionItem 
-                icon={<Zap className="w-4 h-4" />} 
-                label={`${playbackSpeed}x`} 
-                onClick={() => setPlaybackSpeed(playbackSpeed >= 2 ? 0.5 : playbackSpeed + 0.5)} 
-              />
-              <OptionItem icon={<Layout className="w-4 h-4" />} label={aspectRatio} onClick={() => setAspectRatio(aspectRatio === '16/9' ? '4/3' : '16/9')} />
-            </div>
+          {/* Expanded Secondary Controls - Mobile Overlay or Desktop Bottom Row */}
+          <div className={`
+            grid transition-all duration-300 ease-in-out
+            ${showMore ? 'grid-rows-[1fr] opacity-100 mt-2' : 'grid-rows-[0fr] opacity-0 md:grid-rows-[1fr] md:opacity-100 md:mt-2'}
+          `}>
+            <div className="overflow-hidden">
+              <div className="flex flex-wrap items-center justify-between gap-4 pt-4 border-t border-white/10">
+                {/* Options Group */}
+                <div className="flex items-center gap-2 md:gap-4 overflow-x-auto no-scrollbar pb-2 md:pb-0">
+                  <OptionItem icon={<Tv className="w-4 h-4" />} label="PiP" active={showPiP} onClick={togglePiP} />
+                  <OptionItem icon={<Repeat className="w-4 h-4" />} label="Loop" active={isLooping} onClick={toggleLoop} />
+                  <OptionItem 
+                    icon={<Zap className="w-4 h-4" />} 
+                    label={`${playbackSpeed}x`} 
+                    onClick={() => setPlaybackSpeed(playbackSpeed >= 2 ? 0.5 : playbackSpeed + 0.5)} 
+                  />
+                  <OptionItem icon={<Layout className="w-4 h-4" />} label={aspectRatio} onClick={() => setAspectRatio(aspectRatio === '16/9' ? '4/3' : '16/9')} />
+                </div>
 
-            <div className="flex items-center gap-2">
-              <button onClick={takeScreenshot} className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-white/70 flex items-center gap-2">
-                <Camera className="w-4 h-4" />
-                <span className="text-[10px] font-bold uppercase">Capture</span>
-              </button>
-              <button className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-white/70 flex items-center gap-2">
-                <Scissors className="w-4 h-4" />
-                <span className="text-[10px] font-bold uppercase">Trim</span>
-              </button>
+                {/* Extra Actions */}
+                <div className="flex items-center gap-2">
+                  <button onClick={takeScreenshot} className="p-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-white/80 flex items-center gap-2 border border-white/5 transition-colors">
+                    <Camera className="w-4 h-4" />
+                    <span className="text-[10px] font-bold uppercase tracking-widest hidden xs:inline">Capture</span>
+                  </button>
+                  <button className="p-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-white/80 flex items-center gap-2 border border-white/5 transition-colors">
+                    <Scissors className="w-4 h-4" />
+                    <span className="text-[10px] font-bold uppercase tracking-widest hidden xs:inline">Trim</span>
+                  </button>
+                </div>
+
+                {/* Volume Slider for Desktop/Expanded */}
+                <div className="hidden sm:flex items-center gap-3 bg-white/5 px-3 py-1.5 rounded-xl border border-white/5">
+                  <Volume2 className="w-4 h-4 text-white/40" />
+                  <input 
+                    type="range" min="0" max="1.5" step="0.01" 
+                    value={volume}
+                    onChange={(e) => setVolume(parseFloat(e.target.value))}
+                    className="aura-vol-slider w-20 lg:w-32"
+                  />
+                  <span className="text-[10px] font-mono text-white/40 w-8">{Math.round(volume * 100)}%</span>
+                </div>
+              </div>
+
+              {/* Mobile Title Info - Only visible in expanded mobile view */}
+              <div className="md:hidden mt-4 pb-2 border-t border-white/5 pt-4">
+                 <h3 className="text-white font-bold text-sm truncate">{track.title}</h3>
+                 <p className="text-[10px] text-white/40 mt-1 uppercase tracking-tight">
+                    {track.resolution || 'Auto'} • {formatTime(duration)} • {track.size ? (track.size / (1024 * 1024)).toFixed(1) : '0'} MB
+                 </p>
+              </div>
             </div>
           </div>
         </div>

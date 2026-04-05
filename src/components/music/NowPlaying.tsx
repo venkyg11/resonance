@@ -1,6 +1,5 @@
 import { useMusicPlayer } from '@/contexts/MusicPlayerContext';
 import { Heart, Music, Sliders } from 'lucide-react';
-import Visualizer from './Visualizer';
 
 const NowPlaying = () => {
   const { tracks, currentTrackIndex, isPlaying, toggleLike, toggleEqualizer } = useMusicPlayer();
@@ -22,7 +21,6 @@ const NowPlaying = () => {
               <Music className="w-20 h-20 text-muted-foreground" />
             </div>
           )}
-          <Visualizer />
         </div>
       </div>
 

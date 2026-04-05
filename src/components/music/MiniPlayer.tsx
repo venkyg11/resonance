@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { useMusicPlayer } from '@/contexts/MusicPlayerContext';
 import { useVideoPlayer } from '@/contexts/VideoPlayerContext';
 import { Play, Pause, SkipBack, SkipForward, Music, Heart, ChevronDown, Shuffle, Repeat, Repeat1, Volume2, VolumeX, Volume1, Sliders } from 'lucide-react';
-import Visualizer from './Visualizer';
 
 function formatTime(sec: number) {
   if (!sec || !isFinite(sec)) return '0:00';
@@ -79,7 +78,6 @@ const MiniPlayer = ({ activeMode = 'music' }: MiniPlayerProps) => {
                   <Music className="w-20 h-20 text-muted-foreground" />
                 </div>
               )}
-              {activeMode === 'music' && <Visualizer />}
             </div>
           </div>
 
@@ -149,21 +147,19 @@ const MiniPlayer = ({ activeMode = 'music' }: MiniPlayerProps) => {
             </button>
             <div className="hidden sm:block flex-1 relative">
               <input
-                type="range" min="0" max="2" step="0.01"
+                type="range" min="0" max="1.5" step="0.01"
                 value={isMuted ? 0 : volume}
                 onChange={e => setVolume(parseFloat(e.target.value))}
                 className="w-full h-1 cursor-pointer appearance-none rounded-full"
                 style={{
                   background: `linear-gradient(to right, 
                     hsl(var(--primary)) 0%, 
-                    hsl(var(--primary)) ${Math.min(volume, 1) * 50}%, 
-                    ${volume > 1 ? `hsl(30 90% 50%) ${50}%, hsl(0 80% 50%) ${Math.min(volume / 2, 1) * 100}%` : `hsl(var(--muted)) ${Math.min(volume, 1) * 50}%`}, 
-                    hsl(var(--muted)) 100%)`,
+                    hsl(var(--primary)) ${Math.min(volume, 1) * 66.6}%`, 
                 }}
               />
             </div>
             <span className={`hidden sm:block text-[10px] font-mono w-8 ${
-              volume > 1.5 ? 'text-red-400' : volume > 1 ? 'text-orange-400' : 'text-muted-foreground'
+              volume > 1.4 ? 'text-red-400' : volume > 1 ? 'text-orange-400' : 'text-muted-foreground'
             }`}>
               {Math.round(volume * 100)}%
             </span>

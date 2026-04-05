@@ -96,9 +96,15 @@ function parseFilename(name: string): { title: string; artist: string } {
 
 export const MusicPlayerProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [tracks, setTracks] = useState<Track[]>([]);
-  const [currentTrackIndex, setCurrentTrackIndex] = useState(-1);
+  const [currentTrackIndex, setCurrentTrackIndex] = useState(() => {
+    const saved = localStorage.getItem('aura-music-index');
+    return saved ? parseInt(saved, 10) : -1;
+  });
   const [isPlaying, setIsPlaying] = useState(false);
-  const [currentTime, setCurrentTime] = useState(0);
+  const [currentTime, setCurrentTime] = useState(() => {
+    const saved = localStorage.getItem('aura-music-time');
+    return saved ? parseFloat(saved) : 0;
+  });
   const [duration, setDuration] = useState(0);
   const [volume, setVolumeState] = useState(0.8);
   const [isMuted, setIsMuted] = useState(false);
@@ -145,10 +151,39 @@ export const MusicPlayerProvider: React.FC<{ children: React.ReactNode }> = ({ c
           objectUrl: t.file ? URL.createObjectURL(t.file) : t.objectUrl
         }));
         setTracks(restored);
+        
+        // Restore last played track settings after tracks are loaded
+        const savedIndex = localStorage.getItem('aura-music-index');
+        const savedTime = localStorage.getItem('aura-music-time');
+        
+        if (savedIndex !== null) {
+          const idx = parseInt(savedIndex, 10);
+          if (idx >= 0 && idx < restored.length) {
+            // Load but don't autoplay
+            const track = restored[idx];
+            const audio = audioRef.current!;
+            audio.src = track.objectUrl;
+            if (savedTime) audio.currentTime = parseFloat(savedTime);
+            audio.load();
+          }
+        }
       }
     }).catch(console.error)
       .finally(() => setIsDbLoaded(true));
   }, []);
+
+  // Persist Current State
+  useEffect(() => {
+    if (isDbLoaded) {
+      localStorage.setItem('aura-music-index', currentTrackIndex.toString());
+    }
+  }, [currentTrackIndex, isDbLoaded]);
+
+  useEffect(() => {
+    if (isDbLoaded && currentTrackIndex !== -1) {
+      localStorage.setItem('aura-music-time', currentTime.toString());
+    }
+  }, [currentTime, currentTrackIndex, isDbLoaded]);
 
   // DB Save on change
   useEffect(() => {
@@ -371,7 +406,7 @@ export const MusicPlayerProvider: React.FC<{ children: React.ReactNode }> = ({ c
   }, []);
 
   const setVolume = useCallback((vol: number) => {
-    const clamped = Math.min(2, Math.max(0, vol));
+    const clamped = Math.min(1.5, Math.max(0, vol));
     setVolumeState(clamped);
     if (audioRef.current) audioRef.current.volume = Math.min(1, clamped);
     // Use gain node for boost above 100%
