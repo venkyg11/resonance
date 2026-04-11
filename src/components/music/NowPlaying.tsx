@@ -1,9 +1,11 @@
+import { useRef } from 'react';
 import { useMusicPlayer } from '@/contexts/MusicPlayerContext';
 import { Heart, Music, Sliders } from 'lucide-react';
 
 const NowPlaying = () => {
-  const { tracks, currentTrackIndex, isPlaying, toggleLike, toggleEqualizer } = useMusicPlayer();
+  const { tracks, currentTrackIndex, isPlaying, toggleLike, toggleEqualizer, currentTime, duration, seekTo } = useMusicPlayer();
   const track = currentTrackIndex >= 0 ? tracks[currentTrackIndex] : null;
+  const lastTapRef = useRef<number>(0);
 
   return (
     <div className="flex flex-col items-center justify-center flex-1 px-4 py-6 relative z-10 animate-fade-in">
@@ -13,7 +15,28 @@ const NowPlaying = () => {
           <img src={track.artwork} className="absolute inset-0 w-full h-full object-cover blur-2xl opacity-40 scale-105 pointer-events-none transition-all duration-700" alt="" />
         )}
         <div className={`absolute inset-0 rounded-2xl ${isPlaying && !track?.artwork ? 'glow-accent' : ''} transition-shadow duration-700`} />
-        <div className="w-full h-full rounded-2xl bg-muted overflow-hidden relative z-10 shadow-2xl">
+        <div 
+          className="w-full h-full rounded-2xl bg-muted overflow-hidden relative z-10 shadow-2xl cursor-pointer"
+          onDoubleClick={(e) => {
+            e.preventDefault();
+            const rect = e.currentTarget.getBoundingClientRect();
+            if (e.clientX - rect.left > rect.width / 2) seekTo(Math.min(currentTime + 10, duration));
+            else seekTo(Math.max(currentTime - 10, 0));
+          }}
+          onTouchEnd={(e) => {
+            const now = Date.now();
+            if (now - lastTapRef.current < 300) {
+              e.preventDefault();
+              const rect = e.currentTarget.getBoundingClientRect();
+              const touch = e.changedTouches[0];
+              if (touch.clientX - rect.left > rect.width / 2) seekTo(Math.min(currentTime + 10, duration));
+              else seekTo(Math.max(currentTime - 10, 0));
+              lastTapRef.current = 0;
+            } else {
+              lastTapRef.current = now;
+            }
+          }}
+        >
           {track?.artwork ? (
             <img src={track.artwork} alt={track.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
           ) : (

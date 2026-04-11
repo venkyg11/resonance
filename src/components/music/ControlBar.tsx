@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { useMusicPlayer } from '@/contexts/MusicPlayerContext';
 import { useVideoPlayer } from '@/contexts/VideoPlayerContext';
 import {
@@ -53,6 +54,25 @@ const ControlBar = ({ activeMode = 'music' }: ControlBarProps) => {
 
   const resetVolBoost = () => setVolume(1);
 
+  // Global Keyboard Navigation (context-aware via activeMode)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      if (e.code === 'Space') {
+        e.preventDefault();
+        togglePlay();
+      } else if (e.code === 'ArrowRight') {
+        e.preventDefault();
+        seekTo(Math.min(currentTime + 10, duration));
+      } else if (e.code === 'ArrowLeft') {
+        e.preventDefault();
+        seekTo(Math.max(currentTime - 10, 0));
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [activeMode, togglePlay, seekTo, currentTime, duration]);
+
   return (
     <div className="glass-3d rounded-2xl relative px-4 py-2 z-10 flex items-center justify-between gap-4 h-16">
       {/* Left: Mini thumbnail + info */}
@@ -96,15 +116,18 @@ const ControlBar = ({ activeMode = 'music' }: ControlBarProps) => {
         </div>
         <div className="w-full flex items-center gap-2">
           <span className="text-[10px] font-mono text-muted-foreground w-8 text-right">{formatTime(currentTime)}</span>
-          <div
-            className="flex-1 h-1 bg-muted rounded-full cursor-pointer group hover:h-1.5 transition-all relative"
-            onClick={(e) => {
-              const rect = e.currentTarget.getBoundingClientRect();
-              const pct = (e.clientX - rect.left) / rect.width;
-              seekTo(pct * duration);
-            }}
-          >
-            <div className="h-full rounded-full gradient-primary transition-all" style={{ width: `${progress}%` }} />
+          <div className="flex-1 relative h-1 group hover:h-1.5 transition-all flex items-center">
+            <div className="absolute inset-0 bg-muted rounded-full pointer-events-none" />
+            <div className="h-full rounded-full gradient-primary transition-all pointer-events-none" style={{ width: `${progress}%` }} />
+            <input
+              type="range"
+              min="0"
+              max={duration || 100}
+              value={currentTime}
+              onChange={(e) => seekTo(parseFloat(e.target.value))}
+              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer m-0"
+              style={{ padding: 0 }}
+            />
           </div>
           <span className="text-[10px] font-mono text-muted-foreground w-8">{formatTime(duration)}</span>
         </div>

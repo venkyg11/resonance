@@ -31,7 +31,9 @@ const VideoPlayer = () => {
   const [showControls, setShowControls] = useState(true);
   const [showMore, setShowMore] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [autoEnhance, setAutoEnhance] = useState(false);
   const controlsTimeoutRef = useRef<NodeJS.Timeout>();
+  const lastTapRef = useRef<number>(0);
 
   const track = currentVideoIndex >= 0 ? videos[currentVideoIndex] : null;
 
@@ -124,7 +126,9 @@ const VideoPlayer = () => {
           style={{
             // Hardware acceleration hints within style as fallback
             transform: 'translate3d(0,0,0)',
-            filter: (brightness === 100 && contrast === 100) ? 'none' : `brightness(${brightness}%) contrast(${contrast}%)`,
+            filter: autoEnhance 
+              ? 'contrast(1.15) brightness(1.07) saturate(1.18)' 
+              : ((brightness === 100 && contrast === 100) ? 'none' : `brightness(${brightness}%) contrast(${contrast}%)`),
             aspectRatio: aspectRatio === 'auto' ? 'auto' : aspectRatio
           }}
           onTimeUpdate={(e) => setCurrentTime(e.currentTarget.currentTime)}
@@ -133,6 +137,25 @@ const VideoPlayer = () => {
           onPause={() => setIsPlaying(false)}
           onEnded={() => !isLooping && next()}
           onClick={togglePlay}
+          onDoubleClick={(e) => {
+            e.preventDefault();
+            const rect = e.currentTarget.getBoundingClientRect();
+            if (e.clientX - rect.left > rect.width / 2) seekTo(Math.min(currentTime + 10, duration));
+            else seekTo(Math.max(currentTime - 10, 0));
+          }}
+          onTouchEnd={(e) => {
+            const now = Date.now();
+            if (now - lastTapRef.current < 300) {
+              e.preventDefault();
+              const rect = e.currentTarget.getBoundingClientRect();
+              const touch = e.changedTouches[0];
+              if (touch.clientX - rect.left > rect.width / 2) seekTo(Math.min(currentTime + 10, duration));
+              else seekTo(Math.max(currentTime - 10, 0));
+              lastTapRef.current = 0;
+            } else {
+              lastTapRef.current = now;
+            }
+          }}
         />
 
         {/* Global Control Overlays */}
@@ -153,20 +176,22 @@ const VideoPlayer = () => {
           {/* Custom Seek Bar */}
           <div className="flex items-center gap-3 md:gap-4 group/seek">
             <span className="text-[10px] md:text-[11px] font-mono text-white/70 w-8 md:w-12 text-right tabular-nums">{formatTime(currentTime)}</span>
-            <div 
-              className="flex-1 h-1.5 bg-white/10 rounded-full cursor-pointer relative group-hover/seek:h-2.5 transition-all"
-              onClick={(e) => {
-                const rect = e.currentTarget.getBoundingClientRect();
-                const pct = (e.clientX - rect.left) / rect.width;
-                seekTo(pct * duration);
-              }}
-            >
-              <div className="absolute inset-0 h-full bg-white/20 rounded-full transition-all" style={{ width: '0%' }} />
-              <div className="absolute inset-0 h-full gradient-primary rounded-full transition-all duration-100 shadow-[0_0_10px_rgba(var(--primary-rgb),0.5)]" style={{ width: `${(currentTime / (duration || 1)) * 100}%` }} />
+            <div className="flex-1 relative h-1.5 group-hover/seek:h-2.5 transition-all flex items-center">
+              <div className="absolute inset-0 bg-white/20 rounded-full pointer-events-none" />
+              <div className="absolute inset-0 h-full gradient-primary rounded-full transition-all pointer-events-none shadow-[0_0_10px_rgba(var(--primary-rgb),0.5)]" style={{ width: `${(currentTime / (duration || 1)) * 100}%` }} />
               {/* Handle */}
               <div 
-                className="absolute top-1/2 -translate-y-1/2 w-3 h-3 bg-white rounded-full shadow-lg scale-0 group-hover/seek:scale-100 transition-transform"
-                style={{ left: `${(currentTime / (duration || 1)) * 100}%` }}
+                className="absolute w-3 h-3 bg-white rounded-full shadow-lg scale-0 group-hover/seek:scale-100 transition-transform pointer-events-none"
+                style={{ left: `${(currentTime / (duration || 1)) * 100}%`, transform: 'translateX(-50%)' }}
+              />
+              <input
+                type="range"
+                min="0"
+                max={duration || 100}
+                value={currentTime}
+                onChange={(e) => seekTo(parseFloat(e.target.value))}
+                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer m-0"
+                style={{ padding: 0 }}
               />
             </div>
             <span className="text-[10px] md:text-[11px] font-mono text-white/70 w-8 md:w-12 tabular-nums">{formatTime(duration)}</span>
@@ -237,7 +262,38 @@ const VideoPlayer = () => {
             ${showMore ? 'grid-rows-[1fr] opacity-100 mt-2' : 'grid-rows-[0fr] opacity-0 md:grid-rows-[1fr] md:opacity-100 md:mt-2'}
           `}>
             <div className="overflow-hidden">
-              <div className="flex flex-wrap items-center justify-between gap-4 pt-4 border-t border-white/10">
+              <div className="w-full max-w-sm pt-4 border-t border-white/10 mb-4">
+                {/* Auto Enhance Toggle */}
+                <div className="flex flex-col gap-2 w-full">
+                  <div className="flex items-center justify-between bg-white/5 hover:bg-white/10 transition-colors rounded-xl px-4 py-2 border border-white/5">
+                    <div className="flex items-center gap-3">
+                      <ContrastIcon className={`w-4 h-4 transition-colors ${autoEnhance ? 'text-cyan-400' : 'text-white/60'}`} />
+                      <span className="text-white/90 font-medium text-sm">Enhance (OPT)</span>
+                    </div>
+                    <button 
+                      onClick={() => setAutoEnhance(!autoEnhance)}
+                      className={`relative w-10 h-5 rounded-full transition-colors duration-300 ${autoEnhance ? 'bg-cyan-500' : 'bg-white/20'}`}
+                    >
+                      <div className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform duration-300 ${autoEnhance ? 'translate-x-5' : 'translate-x-0'}`} />
+                    </button>
+                  </div>
+                  
+                  {/* Status Strip */}
+                  <div className={`overflow-hidden transition-all duration-300 ${autoEnhance ? 'max-h-12 opacity-100' : 'max-h-0 opacity-0'}`}>
+                    <div className="flex items-center gap-2 bg-cyan-500/10 border border-cyan-500/20 rounded-lg px-3 py-1.5 w-full">
+                      <div className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse flex-shrink-0" />
+                      <span className="text-cyan-200 text-[10px] font-medium tracking-wide truncate flex-1">
+                        Clarity enhancement active — picture quality improved automatically
+                      </span>
+                      <span className="bg-cyan-500/20 text-cyan-300 text-[9px] font-bold px-1.5 py-0.5 rounded flex-shrink-0">
+                        +HD
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center justify-between gap-4">
                 {/* Options Group */}
                 <div className="flex items-center gap-2 md:gap-4 overflow-x-auto no-scrollbar pb-2 md:pb-0">
                   <OptionItem icon={<Tv className="w-4 h-4" />} label="PiP" active={showPiP} onClick={togglePiP} />

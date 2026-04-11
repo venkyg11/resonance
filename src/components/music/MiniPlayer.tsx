@@ -98,17 +98,21 @@ const MiniPlayer = ({ activeMode = 'music' }: MiniPlayerProps) => {
 
           {/* Seek Bar */}
           <div className="w-full max-w-xs mb-4">
-            <div
-              className="w-full h-1.5 bg-muted rounded-full cursor-pointer group hover:h-2.5 transition-all relative"
-              onClick={(e) => {
-                const rect = e.currentTarget.getBoundingClientRect();
-                seekTo(((e.clientX - rect.left) / rect.width) * duration);
-              }}
-            >
-              <div className="h-full rounded-full gradient-primary transition-all" style={{ width: `${progress}%` }} />
+            <div className="w-full h-1.5 group hover:h-2.5 transition-all relative flex items-center">
+              <div className="absolute inset-0 bg-muted rounded-full pointer-events-none" />
+              <div className="h-full rounded-full gradient-primary transition-all pointer-events-none" style={{ width: `${progress}%` }} />
               <div
-                className="absolute top-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-foreground shadow-lg opacity-0 group-hover:opacity-100 transition-opacity"
-                style={{ left: `${progress}%`, transform: 'translateX(-50%) translateY(-50%)' }}
+                className="absolute w-3 h-3 rounded-full bg-foreground shadow-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"
+                style={{ left: `${progress}%`, transform: 'translateX(-50%)' }}
+              />
+              <input
+                type="range"
+                min="0"
+                max={duration || 100}
+                value={currentTime}
+                onChange={(e) => seekTo(parseFloat(e.target.value))}
+                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer m-0"
+                style={{ padding: 0 }}
               />
             </div>
             <div className="flex justify-between mt-1">
@@ -173,8 +177,19 @@ const MiniPlayer = ({ activeMode = 'music' }: MiniPlayerProps) => {
   return (
     <div className="glass-3d rounded-2xl relative overflow-hidden h-[64px] flex flex-col justify-center cursor-pointer transition-transform hover:scale-[1.02]" onClick={() => setExpanded(true)}>
       {/* Progress strip */}
-      <div className="absolute top-0 left-0 w-full h-0.5 bg-muted z-10">
-        <div className="h-full gradient-primary transition-all" style={{ width: `${progress}%` }} />
+      <div className="absolute top-0 left-0 w-full h-0.5 z-10 flex items-center">
+        <div className="absolute inset-0 bg-muted pointer-events-none" />
+        <div className="h-full gradient-primary transition-all pointer-events-none" style={{ width: `${progress}%` }} />
+        <input
+          type="range"
+          min="0"
+          max={duration || 100}
+          value={currentTime}
+          onChange={(e) => seekTo(parseFloat(e.target.value))}
+          className="absolute inset-0 w-full h-1 opacity-0 cursor-pointer m-0 -translate-y-[2px]"
+          style={{ padding: 0 }}
+          onClick={e => e.stopPropagation()}
+        />
       </div>
       <div className="flex items-center px-3 w-full h-full relative">
         {/* Left: Thumbnail & Info */}
